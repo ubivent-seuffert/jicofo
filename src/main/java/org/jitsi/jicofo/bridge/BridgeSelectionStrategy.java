@@ -286,7 +286,7 @@ public abstract class BridgeSelectionStrategy
             if (filtered.count()>1) {
                 final double stress = result.get().getStress();
                 List<Bridge> sameStressBridges = filtered
-                    .filter(b -> b.getStress() <= stress)
+                    .filter(b -> b.getStress() <= stress + 0.05)
                     .collect(Collectors.toList());
                 if (sameStressBridges.size()>1) {
                     result = Optional.of(sameStressBridges.get(ThreadLocalRandom.current().nextInt(sameStressBridges.size())));
@@ -514,7 +514,7 @@ public abstract class BridgeSelectionStrategy
             if (bridges.size()>1) {
                 final double stress = result.get().getStress();
                 List<Bridge> sameStressBridges = bridges.stream()
-                    .filter(b -> b.getStress() <= stress)
+                    .filter(b -> b.getStress() <= stress + 0.05)
                     .collect(Collectors.toList());
                 if (sameStressBridges.size()>1) {
                     result = Optional.of(sameStressBridges.get(ThreadLocalRandom.current().nextInt(sameStressBridges.size())));
