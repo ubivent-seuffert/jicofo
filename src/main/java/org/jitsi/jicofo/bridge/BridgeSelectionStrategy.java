@@ -5,6 +5,7 @@ import org.jitsi.utils.logging2.*;
 import org.json.simple.*;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.*;
 import java.util.stream.*;
 
@@ -260,6 +261,45 @@ public abstract class BridgeSelectionStrategy
         return result;
     }
 
+        /**
+     * Finds the least loaded bridge in the participant's region that is not
+     * overloaded.
+     *
+     * @param bridges the list of operational bridges, ordered by load.
+     * @param participantRegion the participant region.
+     *
+     * @return an optional that contains a bridge that is not loaded and that is
+     * in the participant region.
+     */
+    Optional<Bridge> notLoadedInRegionRandom(
+            List<Bridge> bridges,
+            Map<Bridge, Integer> conferenceBridges,
+            String participantRegion)
+    {
+        Stream<Bridge> filtered =  bridges.stream()
+            .filter(not(b -> isOverloaded(b, conferenceBridges)))
+            .filter(inRegion(participantRegion));
+        Optional<Bridge> result = filtered.findFirst();
+
+        if (result.isPresent())
+        {
+            if (filtered.count()>1) {
+                final double stress = result.get().getStress();
+                List<Bridge> sameStressBridges = filtered
+                    .filter(b -> b.getStress() <= stress)
+                    .collect(Collectors.toList());
+                if (sameStressBridges.size()>1) {
+                    result = Optional.of(sameStressBridges.get(ThreadLocalRandom.current().nextInt(sameStressBridges.size())));
+                }
+            }
+            totalNotLoadedInRegion++;
+            updateSplitStats(conferenceBridges, result.get(), participantRegion);
+            logSelection(result.get(), conferenceBridges, participantRegion);
+        }
+
+        return result;
+    }
+
     Optional<Bridge> notLoadedInRegionGroup(
             List<Bridge> bridges,
             Map<Bridge, Integer> conferenceBridges,
@@ -454,6 +494,32 @@ public abstract class BridgeSelectionStrategy
 
         if (result.isPresent())
         {
+            totalLeastLoaded++;
+            updateSplitStats(conferenceBridges, result.get(), participantRegion);
+            logSelection(result.get(), conferenceBridges, participantRegion);
+        }
+
+        return result;
+    }
+
+    Optional<Bridge> leastLoadedRandom(
+            List<Bridge> bridges,
+            Map<Bridge, Integer> conferenceBridges,
+            String participantRegion)
+    {
+        Optional<Bridge> result = bridges.stream().findFirst();
+
+        if (result.isPresent())
+        {
+            if (bridges.size()>1) {
+                final double stress = result.get().getStress();
+                List<Bridge> sameStressBridges = bridges.stream()
+                    .filter(b -> b.getStress() <= stress)
+                    .collect(Collectors.toList());
+                if (sameStressBridges.size()>1) {
+                    result = Optional.of(sameStressBridges.get(ThreadLocalRandom.current().nextInt(sameStressBridges.size())));
+                }
+            }
             totalLeastLoaded++;
             updateSplitStats(conferenceBridges, result.get(), participantRegion);
             logSelection(result.get(), conferenceBridges, participantRegion);
